@@ -1,0 +1,120 @@
+ ###############################################################
+ #
+ # File Name: Makedefs
+ #
+ # Description: used in Makefile
+ #
+ #################################################################
+os:=${shell uname -s}
+
+
+ifndef COMPILER
+COMPILER=gcc
+endif
+
+ifndef DEBUGGER
+DEBUGGER=gdb
+endif
+
+ifeq (${COMPILER}, gcc)
+
+CC=arm-none-eabi-gcc
+
+AFLAGS=-mthumb         \
+       -mcpu=cortex-m3 \
+       -MD
+
+CFLAGS=-mthumb         \
+       -mcpu=cortex-m3 \
+       -O1             \
+       -g 				\
+       -Wno-attributes    \
+       -MD
+
+AR=arm-none-eabi-ar
+
+LD=arm-none-eabi-ld
+
+LDFLAGS= --gc-section -Map gcc/out.map
+
+LIBGCC=${shell ${CC} -mthumb -march=armv6t2 -print-libgcc-file-name}
+
+LIBC=${shell ${CC} -mthumb -march=armv6t2 -print-file-name=libc.a}
+
+OBJCOPY=arm-none-eabi-objcopy
+
+endif
+
+ifdef DEBUG
+CFLAGS += -g
+endif
+
+${COMPILER}/%.o: %.c
+	@if [ 'x${VERBOSE}' = x ];                               \
+	 then                                                    \
+	     echo "  CC    ${<}";                                \
+	 else                                                    \
+	     echo ${CC} ${CFLAGS} -D${COMPILER} -o ${@} -c ${<}; \
+	 fi
+	@${CC} ${CFLAGS} -D${COMPILER} -o ${@} -c ${<}
+ifeq (${COMPILER}, rvds)
+	@mv -f ${notdir ${@:.o=.d}} ${COMPILER}
+endif
+ifneq ($(findstring CYGWIN, ${os}), )
+	@perl -i.bak -p -e 's/[Cc]:/\/cygdrive\/c/g' ${@:.o=.d}
+endif
+
+${COMPILER}/%.o: %.S
+	@if [ 'x${VERBOSE}' = x ];                               \
+	 then                                                    \
+	     echo "  CC    ${<}";                                \
+	 else                                                    \
+	     echo ${CC} ${AFLAGS} -D${COMPILER} -o ${@} -c ${<}; \
+	 fi
+ifeq (${COMPILER}, rvds)
+	@${CC} ${AFLAGS} -D${COMPILER} -E ${<} > ${@:.o=_.S}
+	@${CC} ${AFLAGS} -o ${@} -c ${@:.o=_.S}
+	@rm ${@:.o=_.S}
+	@${CC} ${AFLAGS} -D${COMPILER} --md -E ${<}
+	@sed 's,<stdout>,${@},g' ${notdir ${<:.S=.d}} > ${@:.o=.d}
+	@rm ${notdir ${<:.S=.d}}
+endif
+ifeq (${COMPILER}, gcc)
+	@${CC} ${AFLAGS} -D${COMPILER} -o ${@} -c ${<}
+endif
+ifneq ($(findstring CYGWIN, ${os}), )
+	@perl -i.bak -p -e 's/[Cc]:/\/cygdrive\/c/g' ${@:.o=.d}
+endif
+
+
+${COMPILER}/%.a:
+	@if [ 'x${VERBOSE}' = x ];     \
+	 then                          \
+	     echo "  AR    ${@}";      \
+	 else                          \
+	     echo ${AR} -cr ${@} ${^}; \
+	 fi
+	@${AR} -cr ${@} ${^}
+
+
+${COMPILER}/%.axf:
+	@if [ 'x${VERBOSE}' = x ]; \
+	 then                      \
+	     echo "  LD    ${@}";  \
+	 fi
+ifeq (${COMPILER}, gcc)
+	@if [ 'x${VERBOSE}' != x ];                           \
+	 then                                                 \
+	     echo ${LD} -T ${SCATTER_${notdir ${@:.axf=}}}    \
+	                --entry ${ENTRY_${notdir ${@:.axf=}}} \
+	                ${LDFLAGSgcc_${notdir ${@:.axf=}}}    \
+	                ${LDFLAGS} -o ${@} ${^}               \
+	                '${LIBC}' '${LIBGCC}';                \
+	 fi
+	@${LD} -T ${SCATTER_${notdir ${@:.axf=}}}    \
+	       --entry ${ENTRY_${notdir ${@:.axf=}}} \
+	       ${LDFLAGSgcc_${notdir ${@:.axf=}}}    \
+	       ${LDFLAGS} -o ${@} ${^}               \
+	       '${LIBC}' '${LIBGCC}'
+	@${OBJCOPY} -O binary ${@} ${@:.axf=.bin}
+endif

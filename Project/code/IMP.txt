@@ -1,0 +1,33 @@
+######### Videos #########
+
+Link: https://drive.google.com/drive/folders/1ec0S2Njf6rQPxsSqO6VrZqBw8PvzBWFP
+
+##########################
+
+
+######### for Make commands #########
+
+make clean
+
+make 
+
+##########################
+
+
+######### for debug commands #########
+
+qemu-system-arm -M lm3s6965evb -m 128M  -s -S  -nographic -kernel gcc/Snake.axf
+
+arm-none-eabi-gdb.exe gcc/Snake.axf
+
+target remote localhost:1234
+
+##########################
+
+
+######### for RUN commands #########
+
+ qemu-system-arm -M lm3s6965evb -nographic -kernel gcc/Snake.bin
+
+
+##########################
