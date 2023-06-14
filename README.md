@@ -1,5 +1,8 @@
 # Snake_Game_RTOS
-
+## Prerequests
+- GNU Make
+- Qemu emulator
+  
 ## Build commands
 ```
 make clean
